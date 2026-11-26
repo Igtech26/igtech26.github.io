@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IG Tech · Monitor de impresoras</title>
+<meta name="theme-color" content="#0f4a96">
+<meta name="robots" content="noindex, nofollow">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f3f5f8;
+  --surface-1: #ffffff;
+  --surface-2: #f7f8fa;
+  --border: #e3e7ed;
+  --track: #e9edf2;
+  --text-primary: #191919;
+  --text-secondary: #5f6670;
+  --text-tertiary: #8a919b;
+  --accent: #257de0;
+  --accent-strong: #1b64be;
+  --accent-soft: #e6f0fc;
+  --series-1: #257de0;
+  --good: #0aac23;  --good-ink: #067a18;   --good-soft: #e5f6e8;
+  --warning: #fbb315; --warning-ink: #8a5a00; --warning-soft: #fff4d9;
+  --serious: #f18a59; --serious-ink: #a2461c;
+  --critical: #dc3c3d; --critical-ink: #b42526; --critical-soft: #fde8e8;
+  --muted-soft: #eceff3;
+  --shadow: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+  --shadow-lg: 0 12px 32px rgba(16,24,40,.18);
+  --radius: 14px;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --bg: #111214; --surface-1: #191919; --surface-2: #202123; --border: #2c2e31; --track: #2c2e31;
+    --text-primary: #efefef; --text-secondary: #a3a7ad; --text-tertiary: #7c8187;
+    --accent: #338ced; --accent-strong: #6aabf1; --accent-soft: #15243a; --series-1: #338ced;
+    --good-ink: #4cd264; --good-soft: #12301a; --warning-ink: #fbc54d; --warning-soft: #33280c;
+    --serious-ink: #f5a37c; --critical-ink: #f07272; --critical-soft: #3a1617; --muted-soft: #26282b;
+    --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lg: 0 16px 40px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111214; --surface-1: #191919; --surface-2: #202123; --border: #2c2e31; --track: #2c2e31;
+  --text-primary: #efefef; --text-secondary: #a3a7ad; --text-tertiary: #7c8187;
+  --accent: #338ced; --accent-strong: #6aabf1; --accent-soft: #15243a; --series-1: #338ced;
+  --good-ink: #4cd264; --good-soft: #12301a; --warning-ink: #fbc54d; --warning-soft: #33280c;
+  --serious-ink: #f5a37c; --critical-ink: #f07272; --critical-soft: #3a1617; --muted-soft: #26282b;
+  --shadow: 0 1px 2px rgba(0,0,0,.4); --shadow-lg: 0 16px 40px rgba(0,0,0,.6);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text-primary);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); font-size: .92em; }
+.muted { color: var(--text-secondary); }
+.hidden { display: none !important; }
+
+/* ---------- barra superior ---------- */
+header.top {
+  position: sticky; top: 0; z-index: 20;
+  background: linear-gradient(120deg, #0e3d7e, #1b64be 60%, #257de0);
+  color: #fff; padding: 12px max(16px, env(safe-area-inset-left)) 12px;
+  box-shadow: 0 2px 10px rgba(14,61,126,.25);
+}
+.top-in { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 38px; height: 38px; border-radius: 10px; flex: none;
+  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28);
+  display: grid; place-items: center; font-weight: 800; letter-spacing: -.5px; font-size: 16px;
+}
+.brand { min-width: 0; }
+.brand b { display: block; font-size: 16px; line-height: 1.2; }
+.brand > span { font-size: 12.5px; opacity: .8; }
+.top-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.updated { font-size: 12.5px; opacity: .85; margin-right: 4px; white-space: nowrap; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.1); color: #fff; display: grid; place-items: center; cursor: pointer;
+}
+.icon-btn:hover { background: rgba(255,255,255,.2); }
+.icon-btn svg { width: 18px; height: 18px; }
+.spin svg { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.demo-flag {
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  background: var(--warning); color: #3d2a00; border-radius: 6px; padding: 2px 7px; margin-left: 6px; vertical-align: 2px;
+}
+
+main { max-width: 1280px; margin: 0 auto; padding: 18px max(16px, env(safe-area-inset-left)) 48px; }
+
+/* ---------- KPIs ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.kpi {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; box-shadow: var(--shadow); text-align: left; cursor: pointer;
+}
+.kpi:hover { border-color: var(--accent); }
+.kpi .lbl { font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.kpi .val { font-size: 30px; font-weight: 700; letter-spacing: -.5px; line-height: 1.15; margin-top: 4px; }
+.kpi .sub { font-size: 12px; color: var(--text-tertiary); }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+
+/* ---------- filtros ---------- */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px; }
+.search {
+  flex: 1 1 260px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+}
+.search svg { width: 16px; height: 16px; color: var(--text-tertiary); flex: none; }
+.search input { border: 0; outline: 0; background: transparent; width: 100%; height: 100%; }
+.search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+select.sel {
+  height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-1);
+  padding: 0 34px 0 12px; max-width: 240px; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a919b' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.seg { display: inline-flex; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 3px; height: 40px; }
+.seg button {
+  border: 0; background: transparent; padding: 0 12px; border-radius: 7px; cursor: pointer;
+  font-size: 13.5px; color: var(--text-secondary); white-space: nowrap;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+.btn {
+  height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface-1); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 500; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent-strong); }
+.btn svg { width: 16px; height: 16px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-strong); color: #fff; }
+
+/* ---------- grupos y tarjetas ---------- */
+.group { margin-bottom: 22px; }
+.group h2 {
+  font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-secondary);
+  margin: 0 0 10px; display: flex; align-items: center; gap: 8px; font-weight: 700;
+}
+.group h2 .count { background: var(--muted-soft); border-radius: 20px; padding: 1px 8px; font-size: 12px; letter-spacing: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.card {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 16px 12px; cursor: pointer; text-align: left;
+  display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+.card:focus-visible { outline: 3px solid var(--accent-soft); border-color: var(--accent); }
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--st, transparent); }
+.card-head { display: flex; align-items: flex-start; gap: 10px; }
+.card-head .ttl { min-width: 0; flex: 1; }
+.card-head .model { font-weight: 700; font-size: 15.5px; }
+.card-head .where { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
+  padding: 3px 9px 3px 7px; border-radius: 20px; white-space: nowrap; flex: none;
+}
+.pill svg { width: 13px; height: 13px; }
+.pill.ok { background: var(--good-soft); color: var(--good-ink); }
+.pill.alerta { background: var(--warning-soft); color: var(--warning-ink); }
+.pill.critico { background: var(--critical-soft); color: var(--critical-ink); }
+.pill.off { background: var(--muted-soft); color: var(--text-secondary); }
+.serial { font-family: var(--mono); font-size: 12.5px; color: var(--text-secondary); display: flex; gap: 6px; align-items: center; }
+.serial b { color: var(--text-primary); font-weight: 600; }
+.counter { display: flex; align-items: baseline; gap: 6px; }
+.counter .big { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+.counter .u { font-size: 13px; color: var(--text-secondary); }
+.meters { display: grid; gap: 8px; }
+.meter .row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 4px; gap: 8px; }
+.meter .row .nm { color: var(--text-secondary); }
+.meter .row .pc { font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.meter .row .pc svg { width: 13px; height: 13px; }
+.track { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; }
+.fill { height: 100%; border-radius: 4px; background: var(--good); min-width: 4px; }
+.fill.bajo { background: var(--warning); } .fill.critico, .fill.agotado { background: var(--critical); }
+.fill.na {
+  width: 100% !important; background: repeating-linear-gradient(135deg, var(--track) 0 6px, var(--border) 6px 12px);
+}
+.card-foot {
+  display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-tertiary);
+  border-top: 1px solid var(--border); padding-top: 9px; margin-top: 2px;
+}
+.card-foot > .num { white-space: nowrap; flex: none; }
+.card-foot .msg { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alerts-line { font-size: 12.5px; color: var(--warning-ink); display: flex; gap: 6px; align-items: flex-start; }
+.alerts-line svg { width: 14px; height: 14px; flex: none; margin-top: 2px; }
+.alerts-line.crit { color: var(--critical-ink); }
+
+.empty {
+  background: var(--surface-1); border: 1px dashed var(--border); border-radius: var(--radius);
+  padding: 40px 20px; text-align: center; color: var(--text-secondary);
+}
+.empty b { display: block; color: var(--text-primary); font-size: 17px; margin-bottom: 6px; }
+.banner {
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px;
+  background: var(--critical-soft); color: var(--critical-ink); display: flex; gap: 10px; align-items: center;
+}
+.skeleton { height: 230px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface-1), var(--surface-2), var(--surface-1)); background-size: 200% 100%; animation: sh 1.2s infinite; border: 1px solid var(--border); }
+@keyframes sh { to { background-position: -200% 0; } }
+
+/* ---------- panel lateral / diálogos ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(10,15,25,.45); z-index: 40; display: flex; justify-content: flex-end; }
+.sheet {
+  width: min(560px, 100%); height: 100%; background: var(--bg); overflow-y: auto;
+  box-shadow: var(--shadow-lg); animation: slide .18s ease-out;
+}
+@keyframes slide { from { transform: translateX(30px); opacity: .4; } }
+.sheet-head {
+  position: sticky; top: 0; z-index: 2; background: var(--surface-1); border-bottom: 1px solid var(--border);
+  padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start;
+}
+.sheet-head h3 { margin: 0; font-size: 18px; }
+.sheet-head .x { margin-left: auto; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-1); cursor: pointer; display: grid; place-items: center; flex: none; }
+.sheet-body { padding: 14px 16px 40px; display: grid; gap: 12px; }
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.panel h4 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+.kv dt { color: var(--text-secondary); }
+.kv dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stats3 .s { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.stats3 .s .l { font-size: 12px; color: var(--text-secondary); }
+.stats3 .s .v { font-size: 20px; font-weight: 700; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th, .tbl td { padding: 7px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.tbl th { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.tbl td.r, .tbl th.r { text-align: right; }
+.chart-wrap { position: relative; }
+.chart-wrap svg { display: block; width: 100%; overflow: visible; }
+.chart-wrap .axis text { fill: var(--text-tertiary); font-size: 11px; }
+.chart-wrap .grid-l { stroke: var(--border); stroke-width: 1; }
+.chart-wrap .bar { fill: var(--series-1); }
+.chart-wrap .hit:hover + .bar, .chart-wrap .bar.on { fill: var(--accent-strong); }
+.tip {
+  position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1);
+  font-size: 12.5px; padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -110%);
+  box-shadow: var(--shadow-lg);
+}
+details.raw summary { cursor: pointer; font-size: 13px; color: var(--accent-strong); margin-top: 10px; }
+.modal { margin: auto; width: min(520px, calc(100% - 24px)); height: auto; max-height: calc(100% - 24px); border-radius: 16px; background: var(--surface-1); overflow-y: auto; box-shadow: var(--shadow-lg); }
+.overlay.center { justify-content: center; align-items: center; }
+.form { display: grid; gap: 12px; padding: 16px; }
+.form label { display: grid; gap: 5px; font-size: 13.5px; color: var(--text-secondary); }
+.form input[type=text], .form input[type=password], .form input[type=date], .form input[type=url] {
+  height: 42px; border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; background: var(--surface-2); color: var(--text-primary);
+}
+.form .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.hint { font-size: 12.5px; color: var(--text-tertiary); }
+.err { color: var(--critical-ink); font-size: 13.5px; }
+
+@media (max-width: 860px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) {
+  .updated { display: none; }
+  .brand > span { display: none; }
+  .brand b { font-size: 15px; }
+  .kpi .val { font-size: 26px; }
+  .filters .seg { width: 100%; } .filters .seg button { flex: 1; padding: 0 6px; }
+  select.sel { flex: 1; max-width: none; }
+  .grid { grid-template-columns: 1fr; }
+  .stats3 .s .v { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="logo" aria-hidden="true">IG</div>
+    <div class="brand"><b>Monitor de impresoras <span id="demoFlag" class="demo-flag hidden">Demo</span></b><span>IG Tech Soluciones Integrales</span></div>
+    <div class="top-actions">
+      <span class="updated" id="updated"></span>
+      <button class="icon-btn" id="btnRefresh" title="Actualizar" aria-label="Actualizar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+      <button class="icon-btn" id="btnTheme" title="Tema claro / oscuro" aria-label="Cambiar tema">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="icon-btn" id="btnSettings" title="Conexión" aria-label="Configurar conexión">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="banner"></div>
+  <section class="kpis" id="kpis" aria-label="Resumen"></section>
+
+  <section class="filters" aria-label="Filtros">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar por serie, cliente, modelo, IP…" autocomplete="off">
+    </label>
+    <select class="sel" id="fCliente" aria-label="Cliente"><option value="">Todos los clientes</option></select>
+    <div class="seg" role="group" aria-label="Estado" id="fEstado">
+      <button data-v="todos" aria-pressed="true">Todos</button>
+      <button data-v="alerta" aria-pressed="false">Con alertas</button>
+      <button data-v="off" aria-pressed="false">Sin conexión</button>
+    </div>
+    <button class="btn" id="btnFact">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+      Contadores por período
+    </button>
+    <button class="btn" id="btnCsv" title="Descargar estado actual en CSV">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+      CSV
+    </button>
+  </section>
+
+  <section id="lista" aria-live="polite"></section>
+</main>
+
+<div id="capa"></div>
+
+<script>
+(function () {
+'use strict';
+
+/* ======================= utilidades ======================= */
+const $ = (s, el) => (el || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = new Intl.NumberFormat('es-PY');
+const fmtN = n => (n === null || n === undefined || n === '' || isNaN(n)) ? '—' : nf.format(Number(n));
+const fmtFecha = d => d ? new Date(d).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+function hace(d) {
+  if (!d) return 'nunca';
+  const s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000);
+  if (s < 60) return 'recién';
+  if (s < 3600) return 'hace ' + Math.round(s / 60) + ' min';
+  if (s < 86400) return 'hace ' + Math.round(s / 3600) + ' h';
+  const dias = Math.round(s / 86400);
+  return 'hace ' + dias + (dias === 1 ? ' día' : ' días');
+}
+const store = {
+  get(k, def) { try { const v = localStorage.getItem('igmon.' + k); return v === null ? def : JSON.parse(v); } catch (e) { return def; } },
+  set(k, v) { try { localStorage.setItem('igmon.' + k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } },
+};
+
+const ICON = {
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4.5M12 17.5v.01"/></svg>',
+  crit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>',
+  off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 4.2-2.7M22 8.8A15 15 0 0 0 10.7 5M5 12.5a10 10 0 0 1 3.4-2M19 12.5a10 10 0 0 0-2.3-1.6M8.5 16a5 5 0 0 1 7 0M12 19.5v.01M3 3l18 18"/></svg>',
+  x: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+};
+
+/* ======================= tema ======================= */
+const temaGuardado = store.get('tema', null);
+if (temaGuardado) document.documentElement.dataset.theme = temaGuardado;
+$('#btnTheme').onclick = () => {
+  const oscuroAhora = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  const nuevo = oscuroAhora ? 'light' : 'dark';
+  document.documentElement.dataset.theme = nuevo;
+  store.set('tema', nuevo);
+};
+
+/* ======================= datos: API real y demo ======================= */
+let conf = store.get('conf', { url: '', clave: '', demo: false, minutosSinReporte: 30 });
+// también se puede abrir con ?url=...&clave=... (se guarda y se limpia de la barra)
+(function () {
+  const p = new URLSearchParams(location.search);
+  if (p.get('url')) {
+    conf = Object.assign({}, conf, { url: p.get('url'), clave: p.get('clave') || conf.clave, demo: false });
+    store.set('conf', conf);
+    history.replaceState(null, '', location.pathname);
+  }
+  if (p.get('demo') !== null) conf = Object.assign({}, conf, { demo: true });
+})();
+
+async function api(params) {
+  if (conf.demo) return Demo.api(params);
+  const u = new URL(conf.url);
+  Object.entries(Object.assign({ clave: conf.clave }, params)).forEach(([k, v]) => u.searchParams.set(k, v));
+  const r = await fetch(u.toString(), { redirect: 'follow' });
+  if (!r.ok) throw new Error('El backend respondió ' + r.status);
+  let d;
+  try { d = await r.json(); } catch (e) { throw new Error('El backend no devolvió JSON. ¿La URL termina en /exec y la app web es pública?'); }
+  if (!d.ok) throw new Error(d.error === 'clave incorrecta' ? 'Clave del dashboard incorrecta.' : (d.error || 'Error del backend'));
+  return d;
+}
+
+const Demo = (function () {
+  const ahora = Date.now();
+  function insumos(t, d, tdc) {
+    return [
+      { tipo: 'toner', nombre: 'Tóner', descripcion: 'Toner Cartridge', pct: t, estado: t <= 0 ? 'agotado' : t <= 10 ? 'critico' : t <= 20 ? 'bajo' : 'ok' },
+      { tipo: 'tambor', nombre: 'Unidad de tambor', descripcion: 'Drum Unit', pct: d, contador: tdc, estado: d <= 10 ? 'critico' : d <= 20 ? 'bajo' : 'ok' },
+    ];
+  }
+  const eq = [
+    { serie: 'E71234A2N567890', modelo: 'DCP-8155DN', marca: 'Brother', cliente: 'Estudio Jurídico Benítez', alias: 'Recepción', ubicacion: 'Planta baja', ip: '192.168.1.50', mac: '30:05:5C:4A:91:0E', firmware: '1.13', nombre_red: 'BRN30055C4A910E', online: true, estado: 'Lista', panel: 'Ready', alertas: [], contador_total: 48231, contadores: { total: 48231, bn: 48231 }, insumos: insumos(45, 80, 9650), uptime_horas: 211.4, agente: 'Estudio Benítez - PC Recepción', ultima_lectura: new Date(ahora - 4 * 60000).toISOString(), ultima_vez_online: new Date(ahora - 4 * 60000).toISOString() },
+    { serie: 'E71234B3N998877', modelo: 'DCP-8155DN', marca: 'Brother', cliente: 'Ferretería El Tala', alias: 'Caja', ubicacion: 'Mostrador', ip: '192.168.0.31', mac: '30:05:5C:7B:22:C1', firmware: '1.13', nombre_red: 'BRN30055C7B22C1', online: true, estado: 'Imprimiendo', panel: 'Toner Low', alertas: ['Tóner bajo'], contador_total: 131877, contadores: { total: 131877 }, insumos: insumos(8, 34, 21980), uptime_horas: 48.9, agente: 'Ferretería - PC Caja', ultima_lectura: new Date(ahora - 2 * 60000).toISOString(), ultima_vez_online: new Date(ahora - 2 * 60000).toISOString() },
+  ];
+  const hist = {};
+  eq.forEach((e, k) => {
+    const puntos = [];
+    let c = e.contador_total;
+    const media = k === 0 ? 140 : 410;
+    for (let i = 0; i < 45; i++) {
+      const dia = new Date(ahora - i * 86400000);
+      const finde = dia.getDay() === 0 ? 0 : dia.getDay() === 6 ? 0.35 : 1;
+      puntos.push({ fecha: dia.toISOString(), contador: c, toner: null, tambor: null });
+      c -= Math.round(media * finde * (0.6 + ((i * 37 + k * 11) % 9) / 10));
+    }
+    hist[e.serie] = puntos.reverse();
+  });
+  return {
+    async api(p) {
+      await new Promise(r => setTimeout(r, 250));
+      if (p.accion === 'historial') return { ok: true, serie: p.serie, puntos: (hist[p.serie] || []).filter(x => new Date(x.fecha) > Date.now() - (p.dias || 90) * 86400000) };
+      if (p.accion === 'periodo') {
+        const t0 = new Date(p.desde + 'T00:00:00').getTime(), t1 = new Date(p.hasta + 'T23:59:59').getTime();
+        return { ok: true, filas: eq.map(e => {
+          const ps = (hist[e.serie] || []).filter(x => { const t = new Date(x.fecha).getTime(); return t >= t0 && t <= t1; });
+          if (!ps.length) return null;
+          return { serie: e.serie, cliente: e.cliente, contador_inicial: ps[0].contador, contador_final: ps[ps.length - 1].contador, paginas: ps[ps.length - 1].contador - ps[0].contador, desde: ps[0].fecha, hasta: ps[ps.length - 1].fecha };
+        }).filter(Boolean) };
+      }
+      return { ok: true, ahora: new Date().toISOString(), equipos: JSON.parse(JSON.stringify(eq)) };
+    },
+  };
+})();
+
+/* ======================= estado de cada equipo ======================= */
+function estadoDe(e) {
+  const minutos = e.ultima_lectura ? (Date.now() - new Date(e.ultima_lectura).getTime()) / 60000 : Infinity;
+  if (minutos > (conf.minutosSinReporte || 30)) return { k: 'off', txt: 'Sin reporte', icon: ICON.off, color: 'var(--text-tertiary)', det: 'El agente no envía datos desde ' + hace(e.ultima_lectura) };
+  if (!e.online) return { k: 'off', txt: 'Sin conexión', icon: ICON.off, color: 'var(--text-tertiary)', det: 'La impresora no responde (apagada o sin red)' };
+  const ins = e.insumos || [];
+  const grave = ins.some(i => i.estado === 'critico' || i.estado === 'agotado') ||
+    (e.alertas || []).some(a => /atasco|sin papel|sin tóner|tapa|servicio|agotado/i.test(a));
+  if (grave) return { k: 'critico', txt: 'Atención', icon: ICON.crit, color: 'var(--critical)' };
+  if ((e.alertas || []).length || ins.some(i => i.estado === 'bajo')) return { k: 'alerta', txt: 'Alerta', icon: ICON.warn, color: 'var(--warning)' };
+  return { k: 'ok', txt: 'En línea', icon: ICON.ok, color: 'var(--good)' };
+}
+const insumo = (e, tipo) => (e.insumos || []).find(i => i.tipo === tipo);
+
+function meterHTML(i, compacto) {
+  if (!i) return '';
+  const tienePct = i.pct !== null && i.pct !== undefined;
+  const cls = tienePct ? (i.estado || 'ok') : 'na';
+  const icono = !tienePct ? '' : (i.estado === 'critico' || i.estado === 'agotado') ? ICON.crit : i.estado === 'bajo' ? ICON.warn : '';
+  const colorTxt = (i.estado === 'critico' || i.estado === 'agotado') ? 'var(--critical-ink)' : i.estado === 'bajo' ? 'var(--warning-ink)' : 'var(--text-primary)';
+  const valor = tienePct ? i.pct + ' %' : (i.estado === 'ok' ? 'Con carga' : 'Sin dato');
+  const extra = !compacto && i.paginas_restantes != null ? ' · ~' + fmtN(i.paginas_restantes) + ' pág. restantes' : '';
+  return '<div class="meter" role="meter" aria-label="' + esc(i.nombre) + '" aria-valuemin="0" aria-valuemax="100"' + (tienePct ? ' aria-valuenow="' + i.pct + '"' : '') + '>' +
+    '<div class="row"><span class="nm">' + esc(i.nombre) + '<span class="hint">' + extra + '</span></span><span class="pc num" style="color:' + colorTxt + '">' + icono + valor + '</span></div>' +
+    '<div class="track"><div class="fill ' + cls + '" style="width:' + (tienePct ? Math.max(0, Math.min(100, i.pct)) : 100) + '%"></div></div></div>';
+}
+
+/* ======================= render principal ======================= */
+let equipos = [], ultimaCarga = null, filtro = { q: '', cliente: '', estado: 'todos' };
+
+function filtrados() {
+  const q = filtro.q.trim().toLowerCase();
+  return equipos.filter(e => {
+    if (filtro.cliente && (e.cliente || 'Sin cliente') !== filtro.cliente) return false;
+    const st = estadoDe(e).k;
+    if (filtro.estado === 'alerta' && !(st === 'alerta' || st === 'critico')) return false;
+    if (filtro.estado === 'off' && st !== 'off') return false;
+    if (!q) return true;
+    return [e.serie, e.cliente, e.modelo, e.alias, e.ubicacion, e.ip, e.panel].some(v => String(v || '').toLowerCase().includes(q));
+  });
+}
+
+function renderKpis() {
+  const st = equipos.map(estadoDe);
+  const enLinea = st.filter(s => s.k !== 'off').length;
+  const alertas = st.filter(s => s.k === 'alerta' || s.k === 'critico').length;
+  const bajos = equipos.filter(e => (e.insumos || []).some(i => ['bajo', 'critico', 'agotado'].includes(i.estado))).length;
+  const off = equipos.length - enLinea;
+  const tiles = [
+    { lbl: 'Equipos', val: equipos.length, sub: new Set(equipos.map(e => e.cliente)).size + ' cliente(s)', f: 'todos', dot: 'var(--accent)' },
+    { lbl: 'En línea', val: enLinea, sub: off ? off + ' sin conexión' : 'todos conectados', f: off ? 'off' : 'todos', dot: 'var(--good)' },
+    { lbl: 'Con alertas', val: alertas, sub: alertas ? 'revisar' : 'sin alertas', f: 'alerta', dot: 'var(--warning)' },
+    { lbl: 'Insumos bajos', val: bajos, sub: 'tóner o tambor ≤ 20 %', f: 'alerta', dot: 'var(--critical)' },
+  ];
+  $('#kpis').innerHTML = tiles.map(t =>
+    '<button class="kpi" data-f="' + t.f + '"><div class="lbl"><span class="dot" style="background:' + t.dot + '"></span>' + t.lbl + '</div>' +
+    '<div class="val num">' + fmtN(t.val) + '</div><div class="sub">' + esc(t.sub) + '</div></button>').join('');
+  $('#kpis').querySelectorAll('.kpi').forEach(b => b.onclick = () => setEstado(b.dataset.f));
+}
+
+function renderClientes() {
+  const sel = $('#fCliente');
+  const clientes = [...new Set(equipos.map(e => e.cliente || 'Sin cliente'))].sort((a, b) => a.localeCompare(b, 'es'));
+  sel.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(c => '<option' + (c === filtro.cliente ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+  if (filtro.cliente && !clientes.includes(filtro.cliente)) filtro.cliente = '';
+}
+
+function cardHTML(e) {
+  const st = estadoDe(e);
+  const toner = insumo(e, 'toner'), tambor = insumo(e, 'tambor');
+  const alertas = (e.alertas || []).filter(a => !/^(tóner|unidad de tambor) /i.test(a) || !toner);
+  const lugar = [e.alias, e.ubicacion].filter(Boolean).join(' · ') || e.ip || '';
+  const pie = st.k === 'off' ? esc(st.det) : esc(e.panel || e.estado || '');
+  return '<button class="card" style="--st:' + st.color + '" data-serie="' + esc(e.serie) + '">' +
+    '<div class="card-head"><div class="ttl"><div class="model">' + esc((e.marca ? e.marca + ' ' : '') + (e.modelo || 'Impresora')) + '</div>' +
+    '<div class="where">' + esc(lugar) + '</div></div>' +
+    '<span class="pill ' + st.k + '">' + st.icon + st.txt + '</span></div>' +
+    '<div class="serial">S/N <b>' + esc(e.serie) + '</b></div>' +
+    '<div class="counter"><span class="big num">' + fmtN(e.contador_total) + '</span><span class="u">páginas</span></div>' +
+    '<div class="meters">' + meterHTML(toner, true) + meterHTML(tambor, true) + '</div>' +
+    (alertas.length ? '<div class="alerts-line' + (st.k === 'critico' ? ' crit' : '') + '">' + (st.k === 'critico' ? ICON.crit : ICON.warn) + '<span>' + esc(alertas.join(' · ')) + '</span></div>' : '') +
+    '<div class="card-foot"><span class="msg">' + pie + '</span><span class="num" title="' + esc(fmtFecha(e.ultima_lectura)) + '">' + hace(e.ultima_lectura) + '</span></div>' +
+    '</button>';
+}
+
+function renderLista() {
+  const lista = $('#lista');
+  if (!equipos.length) {
+    lista.innerHTML = '<div class="empty"><b>Todavía no hay equipos</b>Cuando el agente envíe la primera lectura, las impresoras aparecen acá.</div>';
+    return;
+  }
+  const fs = filtrados();
+  if (!fs.length) { lista.innerHTML = '<div class="empty"><b>Sin resultados</b>Probá con otro filtro o búsqueda.</div>'; return; }
+  const orden = { critico: 0, alerta: 1, off: 2, ok: 3 };
+  const grupos = {};
+  fs.forEach(e => (grupos[e.cliente || 'Sin cliente'] = grupos[e.cliente || 'Sin cliente'] || []).push(e));
+  lista.innerHTML = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'es')).map(c => {
+    const items = grupos[c].sort((a, b) => orden[estadoDe(a).k] - orden[estadoDe(b).k] || String(a.alias).localeCompare(String(b.alias), 'es'));
+    return '<section class="group"><h2>' + esc(c) + ' <span class="count">' + items.length + '</span></h2><div class="grid">' + items.map(cardHTML).join('') + '</div></section>';
+  }).join('');
+  lista.querySelectorAll('.card').forEach(b => b.onclick = () => abrirDetalle(b.dataset.serie));
+}
+
+function renderTodo() { renderKpis(); renderClientes(); renderLista(); renderActualizado(); }
+function renderActualizado() { $('#updated').textContent = ultimaCarga ? 'Actualizado ' + hace(ultimaCarga) : ''; }
+
+function setEstado(v) {
+  filtro.estado = v;
+  document.querySelectorAll('#fEstado button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  renderLista();
+}
+
+/* ======================= carga ======================= */
+let cargando = false;
+async function cargar(silencioso) {
+  if (cargando) return;
+  if (!conf.demo && !conf.url) { abrirConfig(true); renderVacio(); return; }
+  cargando = true;
+  $('#btnRefresh').classList.add('spin');
+  $('#demoFlag').classList.toggle('hidden', !conf.demo);
+  if (!silencioso && !equipos.length) $('#lista').innerHTML = '<div class="grid">' + '<div class="skeleton"></div>'.repeat(2) + '</div>';
+  try {
+    const d = await api({ accion: 'equipos' });
+    equipos = d.equipos || [];
+    ultimaCarga = new Date();
+    $('#banner').innerHTML = '';
+    renderTodo();
+  } catch (err) {
+    $('#banner').innerHTML = '<div class="banner">' + ICON.crit.replace('<svg', '<svg width="18" height="18"') + '<span>No se pudieron cargar los datos: ' + esc(err.message) + '</span></div>';
+    if (!equipos.length) renderVacio();
+  } finally {
+    cargando = false;
+    $('#btnRefresh').classList.remove('spin');
+  }
+}
+function renderVacio() {
+  renderKpis();
+  $('#lista').innerHTML = '<div class="empty"><b>Conectá el dashboard</b>Tocá el engranaje y pegá la URL del backend y la clave, o abrí la demo.</div>';
+}
+
+$('#btnRefresh').onclick = () => cargar();
+$('#btnSettings').onclick = () => abrirConfig(false);
+$('#q').oninput = e => { filtro.q = e.target.value; renderLista(); };
+$('#fCliente').onchange = e => { filtro.cliente = e.target.value; renderLista(); };
+document.querySelectorAll('#fEstado button').forEach(b => b.onclick = () => setEstado(b.dataset.v));
+setInterval(() => { if (!document.hidden) cargar(true); }, 60000);
+setInterval(renderActualizado, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && ultimaCarga && Date.now() - ultimaCarga > 60000) cargar(true); });
+
+/* ======================= capas (panel / modal) ======================= */
+function abrirCapa(html, centro) {
+  const capa = $('#capa');
+  capa.innerHTML = '<div class="overlay' + (centro ? ' center' : '') + '">' + html + '</div>';
+  const ov = capa.firstChild;
+  ov.addEventListener('click', ev => { if (ev.target === ov) cerrarCapa(); });
+  ov.querySelectorAll('[data-cerrar]').forEach(b => b.onclick = cerrarCapa);
+  document.body.style.overflow = 'hidden';
+  return ov;
+}
+function cerrarCapa() { $('#capa').innerHTML = ''; document.body.style.overflow = ''; }
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') cerrarCapa(); });
+
+/* ======================= detalle de un equipo ======================= */
+function abrirDetalle(serie) {
+  const e = equipos.find(x => x.serie === serie);
+  if (!e) return;
+  const st = estadoDe(e);
+  const filas = [
+    ['Cliente', e.cliente], ['Equipo', e.alias], ['Ubicación', e.ubicacion], ['IP', e.ip], ['MAC', e.mac],
+    ['Nombre en red', e.nombre_red], ['Firmware', e.firmware], ['Estado', e.estado], ['Mensaje del panel', e.panel],
+    ['Encendida hace', e.uptime_horas != null ? fmtN(e.uptime_horas) + ' h' : null],
+    ['Última lectura', fmtFecha(e.ultima_lectura) + ' (' + hace(e.ultima_lectura) + ')'],
+    ['Última vez en línea', fmtFecha(e.ultima_vez_online)], ['Agente', e.agente],
+  ].filter(f => f[1] !== undefined && f[1] !== null && f[1] !== '');
+  const cont = e.contadores || {};
+  const nombresCont = { total: 'Total', bn: 'Blanco y negro', color: 'Color', duplex: 'Dúplex', imagen: 'Imágenes' };
+  const contFilas = Object.keys(cont).length < 2 ? '' : Object.keys(cont).filter(k => nombresCont[k]).map(k => '<tr><td>' + nombresCont[k] + '</td><td class="r num">' + fmtN(cont[k]) + '</td></tr>').join('');
+  const tambor = insumo(e, 'tambor');
+
+  const ov = abrirCapa(
+    '<aside class="sheet" role="dialog" aria-modal="true" aria-label="Detalle del equipo">' +
+    '<div class="sheet-head"><div><h3>' + esc((e.marca ? e.marca + ' ' : '') + (e.modelo || 'Impresora')) + '</h3>' +
+    '<div class="serial" style="margin-top:4px">S/N <b>' + esc(e.serie) + '</b></div></div>' +
+    '<span class="pill ' + st.k + '" style="margin-top:4px">' + st.icon + st.txt + '</span>' +
+    '<button class="x" data-cerrar aria-label="Cerrar">' + ICON.x + '</button></div>' +
+    '<div class="sheet-body">' +
+      (st.det ? '<div class="banner" style="margin:0;background:var(--muted-soft);color:var(--text-secondary)">' + ICON.off.replace('<svg', '<svg width="18" height="18"') + '<span>' + esc(st.det) + '. Se muestran los últimos datos conocidos.</span></div>' : '') +
+      ((e.alertas || []).length ? '<div class="panel"><h4>Alertas</h4>' + e.alertas.map(a => '<div class="alerts-line" style="margin:3px 0">' + ICON.warn + '<span>' + esc(a) + '</span></div>').join('') + '</div>' : '') +
+      '<div class="panel"><h4>Contador</h4><div class="counter"><span class="big num" style="font-size:34px">' + fmtN(e.contador_total) + '</span><span class="u">páginas totales</span></div>' +
+        (contFilas ? '<table class="tbl" style="margin-top:8px">' + contFilas + '</table>' : '') + '</div>' +
+      '<div class="panel"><h4>Insumos</h4><div class="meters" style="gap:12px">' + (e.insumos || []).map(i => meterHTML(i, false)).join('') + '</div>' +
+        (tambor && tambor.contador != null ? '<div class="hint" style="margin-top:8px">El tambor actual lleva ' + fmtN(tambor.contador) + ' páginas.</div>' : '') +
+        ((e.insumos || []).some(i => i.pct == null) ? '<div class="hint" style="margin-top:6px">“Con carga”: el equipo informa que hay insumo pero no el porcentaje.</div>' : '') + '</div>' +
+      '<div class="panel"><h4>Páginas por día · últimos 30 días</h4><div id="hstats"></div><div class="chart-wrap" id="hchart"><div class="skeleton" style="height:180px"></div></div><div id="htable"></div></div>' +
+      '<div class="panel"><h4>Datos del equipo</h4><dl class="kv">' + filas.map(f => '<dt>' + f[0] + '</dt><dd>' + esc(f[1]) + '</dd>').join('') + '</dl></div>' +
+    '</div></aside>');
+  cargarHistorial(e, ov);
+}
+
+function paginasPorDia(puntos, dias) {
+  const porDia = new Map();                     // día -> último contador del día
+  puntos.forEach(p => {
+    if (p.contador === '' || p.contador == null) return;
+    const d = new Date(p.fecha); const k = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    const prev = porDia.get(k);
+    if (!prev || new Date(p.fecha) > prev.t) porDia.set(k, { t: new Date(p.fecha), c: Number(p.contador) });
+  });
+  const salida = [];
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  let anterior = null;
+  // buscar el último contador antes de la ventana para que el primer día tenga valor
+  const inicio = new Date(hoy.getTime() - (dias - 1) * 86400000);
+  porDia.forEach(v => { if (v.t < inicio && (!anterior || v.t > anterior.t)) anterior = v; });
+  for (let i = dias - 1; i >= 0; i--) {
+    const d = new Date(hoy.getTime() - i * 86400000);
+    const k = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    const v = porDia.get(k);
+    let pag = null;
+    if (v && anterior) pag = Math.max(0, v.c - anterior.c);
+    if (v) anterior = v;
+    salida.push({ fecha: d, paginas: pag });
+  }
+  return salida;
+}
+
+async function cargarHistorial(e, ov) {
+  const box = $('#hchart', ov);
+  try {
+    const d = await api({ accion: 'historial', serie: e.serie, dias: 45 });
+    if (!document.body.contains(box)) return;
+    const serie = paginasPorDia(d.puntos || [], 30);
+    const conDato = serie.filter(s => s.paginas != null);
+    if (!conDato.length) {
+      box.innerHTML = '<div class="hint" style="padding:16px 0">Todavía no hay historial suficiente. Se completa a medida que el agente envía lecturas (hace falta al menos un día).</div>';
+      return;
+    }
+    const total = conDato.reduce((a, s) => a + s.paginas, 0);
+    const habiles = conDato.filter(s => s.fecha.getDay() !== 0);
+    const prom = Math.round(total / Math.max(1, habiles.length));
+    const max = conDato.reduce((m, s) => s.paginas > m.paginas ? s : m, conDato[0]);
+    $('#hstats', ov).innerHTML = '<div class="stats3" style="margin-bottom:12px">' +
+      '<div class="s"><div class="l">Total 30 días</div><div class="v num">' + fmtN(total) + '</div></div>' +
+      '<div class="s"><div class="l">Promedio / día</div><div class="v num">' + fmtN(prom) + '</div></div>' +
+      '<div class="s"><div class="l">Día pico</div><div class="v num">' + fmtN(max.paginas) + '</div></div></div>';
+    dibujarBarras(box, serie);
+    $('#htable', ov).innerHTML = '<details class="raw"><summary>Ver como tabla</summary><table class="tbl" style="margin-top:6px"><tr><th>Día</th><th class="r">Páginas</th></tr>' +
+      serie.slice().reverse().map(s => '<tr><td>' + s.fecha.toLocaleDateString('es-PY', { weekday: 'short', day: '2-digit', month: '2-digit' }) + '</td><td class="r num">' + (s.paginas == null ? '—' : fmtN(s.paginas)) + '</td></tr>').join('') + '</table></details>';
+  } catch (err) {
+    box.innerHTML = '<div class="err">No se pudo cargar el historial: ' + esc(err.message) + '</div>';
+  }
+}
+
+function escalaBonita(max) {
+  if (max <= 0) return { top: 10, paso: 5 };
+  const bruto = max / 3, mag = Math.pow(10, Math.floor(Math.log10(bruto)));
+  const paso = [1, 2, 2.5, 5, 10].map(m => m * mag).find(p => p >= bruto) || 10 * mag;
+  return { top: Math.ceil(max / paso) * paso, paso };
+}
+
+function dibujarBarras(box, serie) {
+  const W = Math.max(280, box.clientWidth || 480), H = 180, L = 40, R = 6, T = 10, B = 24;
+  const max = Math.max(...serie.map(s => s.paginas || 0));
+  const { top, paso } = escalaBonita(max);
+  const n = serie.length, ancho = (W - L - R) / n, gap = 2, bw = Math.max(2, ancho - gap);
+  const y = v => T + (H - T - B) * (1 - v / top);
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" height="' + H + '" role="img" aria-label="Páginas impresas por día, últimos 30 días">';
+  svg += '<g class="axis">';
+  for (let v = 0; v <= top + 0.0001; v += paso) {
+    svg += '<line class="grid-l" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"' + (v === 0 ? ' style="stroke:var(--text-tertiary)"' : '') + '/>';
+    svg += '<text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + nf.format(v) + '</text>';
+  }
+  const cada = n > 20 ? 7 : n > 10 ? 3 : 1;
+  serie.forEach((s, i) => {
+    if ((n - 1 - i) % cada === 0) svg += '<text x="' + (L + i * ancho + ancho / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + s.fecha.getDate() + '/' + (s.fecha.getMonth() + 1) + '</text>';
+  });
+  svg += '</g>';
+  serie.forEach((s, i) => {
+    const x = L + i * ancho + gap / 2;
+    svg += '<rect class="hit" data-i="' + i + '" x="' + (L + i * ancho) + '" y="' + T + '" width="' + ancho + '" height="' + (H - T - B) + '" fill="transparent"/>';
+    if (s.paginas) {
+      const h = Math.max(2, (H - T - B) * s.paginas / top), y0 = H - B;
+      const r = Math.min(4, bw / 2, h);
+      // barra con puntas superiores redondeadas, base recta sobre el eje
+      svg += '<path class="bar" data-i="' + i + '" d="M' + x + ',' + y0 + 'V' + (y0 - h + r) + 'Q' + x + ',' + (y0 - h) + ' ' + (x + r) + ',' + (y0 - h) +
+        'H' + (x + bw - r) + 'Q' + (x + bw) + ',' + (y0 - h) + ' ' + (x + bw) + ',' + (y0 - h + r) + 'V' + y0 + 'Z"/>';
+    } else {
+      svg += '<path class="bar" data-i="' + i + '" d=""/>';
+    }
+  });
+  svg += '</svg><div class="tip hidden"></div>';
+  box.innerHTML = svg;
+  const tip = $('.tip', box), bars = box.querySelectorAll('.bar');
+  box.querySelectorAll('.hit').forEach(h => {
+    const mostrar = () => {
+      const i = +h.dataset.i, s = serie[i];
+      bars.forEach(b => b.classList.toggle('on', +b.dataset.i === i));
+      tip.innerHTML = '<b>' + s.fecha.toLocaleDateString('es-PY', { weekday: 'short', day: '2-digit', month: '2-digit' }) + '</b> · ' + (s.paginas == null ? 'sin datos' : fmtN(s.paginas) + ' pág.');
+      tip.classList.remove('hidden');
+      const px = (L + i * ancho + ancho / 2) / W * box.clientWidth;
+      const py = (s.paginas ? y(s.paginas) : H - B) / H * box.clientHeight;
+      tip.style.left = Math.min(box.clientWidth - 70, Math.max(70, px)) + 'px';
+      tip.style.top = py + 'px';
+    };
+    h.addEventListener('mouseenter', mostrar);
+    h.addEventListener('click', mostrar);
+  });
+  box.addEventListener('mouseleave', () => { tip.classList.add('hidden'); bars.forEach(b => b.classList.remove('on')); });
+}
+
+/* ======================= contadores por período ======================= */
+$('#btnFact').onclick = () => {
+  const hoy = new Date(), ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const ov = abrirCapa('<div class="modal" role="dialog" aria-modal="true" aria-label="Contadores por período">' +
+    '<div class="sheet-head"><div><h3>Contadores por período</h3><div class="hint">Páginas impresas entre dos fechas, para cobrar por copia</div></div>' +
+    '<button class="x" data-cerrar aria-label="Cerrar">' + ICON.x + '</button></div>' +
+    '<div class="form"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    '<label>Desde<input type="date" id="pDesde" value="' + iso(ini) + '"></label><label>Hasta<input type="date" id="pHasta" value="' + iso(hoy) + '"></label></div>' +
+    '<div class="actions"><button class="btn" id="pCsv" disabled>Descargar CSV</button><button class="btn primary" id="pVer">Calcular</button></div>' +
+    '<div id="pRes"></div></div></div>', true);
+  let filas = [];
+  $('#pVer', ov).onclick = async () => {
+    const res = $('#pRes', ov);
+    res.innerHTML = '<div class="hint">Calculando…</div>';
+    try {
+      const d = await api({ accion: 'periodo', desde: $('#pDesde', ov).value, hasta: $('#pHasta', ov).value });
+      filas = (d.filas || []).sort((a, b) => String(a.cliente).localeCompare(String(b.cliente), 'es'));
+      if (!filas.length) { res.innerHTML = '<div class="hint">No hay lecturas en ese período.</div>'; return; }
+      const total = filas.reduce((a, f) => a + Number(f.paginas || 0), 0);
+      res.innerHTML = '<div style="overflow-x:auto"><table class="tbl"><tr><th>Cliente / serie</th><th class="r">Inicial</th><th class="r">Final</th><th class="r">Páginas</th></tr>' +
+        filas.map(f => '<tr><td>' + esc(f.cliente) + '<div class="mono muted" style="font-size:12px">' + esc(f.serie) + '</div></td><td class="r num">' + fmtN(f.contador_inicial) + '</td><td class="r num">' + fmtN(f.contador_final) + '</td><td class="r num"><b>' + fmtN(f.paginas) + '</b></td></tr>').join('') +
+        '<tr><td><b>Total</b></td><td></td><td></td><td class="r num"><b>' + fmtN(total) + '</b></td></tr></table></div>' +
+        '<div class="hint" style="margin-top:8px">Se toma la primera y la última lectura de cada equipo dentro del período.</div>';
+      $('#pCsv', ov).disabled = false;
+    } catch (err) { res.innerHTML = '<div class="err">' + esc(err.message) + '</div>'; }
+  };
+  $('#pCsv', ov).onclick = () => descargarCSV('contadores_' + $('#pDesde', ov).value + '_a_' + $('#pHasta', ov).value + '.csv',
+    [['Cliente', 'Serie', 'Contador inicial', 'Contador final', 'Páginas', 'Primera lectura', 'Última lectura']].concat(
+      filas.map(f => [f.cliente, f.serie, f.contador_inicial, f.contador_final, f.paginas, fmtFecha(f.desde), fmtFecha(f.hasta)])));
+  $('#pVer', ov).click();
+};
+
+$('#btnCsv').onclick = () => {
+  const rows = [['Cliente', 'Equipo', 'Ubicación', 'Modelo', 'Serie', 'IP', 'Estado', 'Contador', 'Tóner %', 'Tambor %', 'Alertas', 'Última lectura']];
+  filtrados().forEach(e => {
+    const t = insumo(e, 'toner'), d = insumo(e, 'tambor');
+    rows.push([e.cliente, e.alias, e.ubicacion, e.modelo, e.serie, e.ip, estadoDe(e).txt, e.contador_total,
+      t && t.pct != null ? t.pct : '', d && d.pct != null ? d.pct : '', (e.alertas || []).join(' / '), fmtFecha(e.ultima_lectura)]);
+  });
+  const hoy = new Date().toISOString().slice(0, 10);
+  descargarCSV('estado_impresoras_' + hoy + '.csv', rows);
+};
+
+function descargarCSV(nombre, filas) {
+  const csv = '﻿' + filas.map(r => r.map(v => {
+    const s = String(v == null ? '' : v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ======================= configuración ======================= */
+function abrirConfig(primeraVez) {
+  const ov = abrirCapa('<div class="modal" role="dialog" aria-modal="true" aria-label="Conexión">' +
+    '<div class="sheet-head"><div><h3>' + (primeraVez ? 'Conectar el dashboard' : 'Conexión') + '</h3><div class="hint">Se guarda solo en este navegador</div></div>' +
+    (primeraVez ? '' : '<button class="x" data-cerrar aria-label="Cerrar">' + ICON.x + '</button>') + '</div>' +
+    '<form class="form" id="fConf">' +
+    '<label>URL del backend (Apps Script)<input type="url" id="cUrl" placeholder="https://script.google.com/macros/s/…/exec" value="' + esc(conf.url) + '"></label>' +
+    '<label>Clave del dashboard<input type="password" id="cClave" value="' + esc(conf.clave) + '" autocomplete="current-password"></label>' +
+    '<label>Marcar “Sin reporte” después de (minutos)<input type="text" inputmode="numeric" id="cMin" value="' + esc(conf.minutosSinReporte || 30) + '"></label>' +
+    '<div id="cErr" class="err"></div>' +
+    '<div class="actions"><button type="button" class="btn" id="cDemo">Ver demo</button><button type="submit" class="btn primary">Guardar y conectar</button></div>' +
+    '</form></div>', true);
+  $('#fConf', ov).onsubmit = ev => {
+    ev.preventDefault();
+    const url = $('#cUrl', ov).value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url) && !/^https?:\/\/(localhost|127\.0\.0\.1)/.test(url)) {
+      $('#cErr', ov).textContent = 'La URL debe ser la de la aplicación web de Apps Script (termina en /exec).';
+      return;
+    }
+    conf = { url, clave: $('#cClave', ov).value, demo: false, minutosSinReporte: Math.max(5, parseInt($('#cMin', ov).value, 10) || 30) };
+    store.set('conf', conf);
+    equipos = []; cerrarCapa(); cargar();
+  };
+  $('#cDemo', ov).onclick = () => { conf = Object.assign({}, conf, { demo: true }); equipos = []; cerrarCapa(); cargar(); };
+}
+
+cargar();
+})();
+</script>
+</body>
+</html>
